@@ -8,6 +8,63 @@
 import SceneKit //библиотека для работы с 3Д моделями
 
 class GameViewController: UIViewController {
+    
+    
+    // MARK: Outlets
+    let scoreLabel = UILabel()
+    
+    // MARK: Stored Properties
+    var duration: TimeInterval = 10
+    
+    var score = 0 {
+        didSet {
+            scoreLabel.text = "Score: \(score)"
+        }
+    }
+    
+    // MARK: Computed Properties
+    var scene: SCNScene {
+        (view as! SCNView).scene!
+    }
+    
+    var ship: SCNNode? {
+        scene.rootNode.childNode(withName: "ship", recursively: true)
+    }
+    
+    // MARK: Methods
+    func addLabel() {
+        scoreLabel.numberOfLines = 2
+        scoreLabel.textColor = .white
+        scoreLabel.font = UIFont.systemFont(ofSize: 30)
+        scoreLabel.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: 100)
+        scoreLabel.textAlignment = .center
+            
+        view.addSubview(scoreLabel)
+        score = 0
+    }
+    
+    func addShip() {
+        
+    let x = Int.random(in: -25...25)
+    let y = Int.random(in: -25...25)
+    let z = -105
+        
+    ship?.position = SCNVector3(x, y, z) // задаем координату для самолета
+        
+    ship?.removeAllActions() // удаляем анимацию корабля
+        
+    ship?.look(at: SCNVector3(2 * x, 2 * y, 2 * z))
+        
+    ship?.runAction(SCNAction.move(to: SCNVector3(0, 0, 0), duration: duration)) { // создание анимации корабля
+        DispatchQueue.main.async {
+            self.scoreLabel.text = "GAME OVER\nScore: \(self.score)"
+            self.ship?.removeFromParentNode()
+        }
+    } //Если инициализировать просто SCNVector3(), то по умолчанию координаты будут 0
+        
+        duration *= 0.9
+        
+}
 
     override func viewDidLoad() {
         super.viewDidLoad() //super показывет что это метод родителя
@@ -37,12 +94,7 @@ class GameViewController: UIViewController {
         ambientLightNode.light!.color = UIColor.green
         scene.rootNode.addChildNode(ambientLightNode)
         
-        // retrieve the ship node
-        let ship = scene.rootNode.childNode(withName: "ship", recursively: true)!
-        ship.position.z = -105 // задаем координату для самолета
-        
-        // animate the 3d object
-        //ship.runAction(SCNAction.repeatForever(SCNAction.rotateBy(x: 0, y: 2, z: 0, duration: 1)))
+
         
         // retrieve the SCNView
         let scnView = self.view as! SCNView
@@ -62,6 +114,12 @@ class GameViewController: UIViewController {
         // add a tap gesture recognizer
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         scnView.addGestureRecognizer(tapGesture)
+        
+        //add label
+        addLabel()
+        
+        //add ship
+        addShip()
     }
     
     @objc
@@ -82,24 +140,25 @@ class GameViewController: UIViewController {
             
             // highlight it
             SCNTransaction.begin()
-            SCNTransaction.animationDuration = 0.5
+            SCNTransaction.animationDuration = 0.2
             
             // on completion - unhighlight
             SCNTransaction.completionBlock = {
-                SCNTransaction.begin()
-                SCNTransaction.animationDuration = 0.5
-                
                 material.emission.contents = UIColor.black
                 
-                SCNTransaction.commit()
+                DispatchQueue.main.async {
+                    self.addShip()
+                }
+                self.score += 1
             }
             
-            material.emission.contents = UIColor.blue
+            material.emission.contents = UIColor.red
             
             SCNTransaction.commit()
         }
     }
     
+    // MARK: Ingerited Computed Properties
     override var shouldAutorotate: Bool {
         return true
     }
